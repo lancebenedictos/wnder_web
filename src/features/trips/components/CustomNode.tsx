@@ -89,8 +89,7 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
   }, []);
 
   useEffect(() => {
-    console.log(response);
-    setLocationState(response);
+    if (response) setLocationState(response.location);
   }, [response]);
 
   return (
@@ -116,12 +115,12 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
           isConnectable={isConnectable}
         />
 
-        {!loading && locationState?.googleLocation ? (
+        {response && locationState ? (
           <div
             className="flex flex-col w-full p-4  gap-2 overflow-x-hidden overflow-y-auto nowheel  h-96"
             id="style-4"
           >
-            <p className=""> Added by: {locationState?.addedBy.username}</p>
+            <p className=""> Added by: {locationState?.addedBy?.username}</p>
 
             <button
               className="flex z-50 self-start w-full text-start bg-slate-100 rounded-md p-1 items-center justify-between"
@@ -129,16 +128,14 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
                 setState({ ...state, detailsOpen: !state.detailsOpen })
               }
             >
-              {locationState.googleLocation.name}
+              {response.googleLocation.name}
               {state.detailsOpen ? <BiChevronUp /> : <BiChevronDown />}
             </button>
 
             {/* detauls */}
             {state.detailsOpen ? (
               <>
-                <p>
-                  {locationState.googleLocation?.editorial_summary?.overview}
-                </p>
+                <p>{response.googleLocation?.editorial_summary?.overview}</p>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -150,7 +147,7 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
                 </button>
 
                 {state.isHoursOpen &&
-                  locationState.googleLocation?.current_opening_hours?.weekday_text.map(
+                  response.googleLocation?.current_opening_hours?.weekday_text.map(
                     (text: string) => {
                       return <p key={text}>{text}</p>;
                     }
@@ -158,26 +155,24 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
 
                 <div className=" nodrag " onClick={(e) => e.stopPropagation()}>
                   <Carousel swipeable={true} showThumbs={false}>
-                    {locationState.googleLocation?.reviews?.map(
-                      (review: any) => {
-                        return (
-                          <div
-                            className=" w-full  border-2 p-4 rounded-lg  flex flex-col gap-3 h-72"
-                            key={review.text}
-                          >
-                            <span className="flex gap-4 items-center justify-between">
-                              <p>{review.author_name}</p>
-                              <span className="flex items-center">
-                                <p>{review.rating}</p>
-                                <RiStarFill />
-                              </span>
+                    {response.googleLocation?.reviews?.map((review: any) => {
+                      return (
+                        <div
+                          className=" w-full  border-2 p-4 rounded-lg  flex flex-col gap-3 h-72"
+                          key={review.text}
+                        >
+                          <span className="flex gap-4 items-center justify-between">
+                            <p>{review.author_name}</p>
+                            <span className="flex items-center">
+                              <p>{review.rating}</p>
+                              <RiStarFill />
                             </span>
+                          </span>
 
-                            <p className=" text-start">{review.text}</p>
-                          </div>
-                        );
-                      }
-                    )}
+                          <p className=" text-start">{review.text}</p>
+                        </div>
+                      );
+                    })}
                   </Carousel>
                 </div>
               </>
@@ -197,10 +192,6 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
                     ...locationState,
                     startDate: e.currentTarget.value,
                   });
-                  setLocationState({
-                    ...locationState,
-                    startDate: e.currentTarget.value,
-                  });
                 }}
               />
               <label htmlFor="endDate">Choose time and date to leave:</label>
@@ -212,10 +203,6 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
                 className="border-2 p-2 rounded-lg"
                 onChange={(e) => {
                   upsertLocation({
-                    ...locationState,
-                    endDate: e.currentTarget.value,
-                  });
-                  setLocationState({
                     ...locationState,
                     endDate: e.currentTarget.value,
                   });
