@@ -3,15 +3,16 @@ import "react-responsive-carousel/lib/styles/carousel.min.css"; // requires a lo
 import { useContext, useEffect, useState } from "react";
 import { Handle, Position, useStore } from "reactflow";
 import useFetch from "../../../hooks/useFetch";
-import { RiStarFill } from "react-icons/ri";
+import { RiAttachmentLine, RiStarFill } from "react-icons/ri";
 import { BiChevronDown, BiChevronUp } from "react-icons/bi";
 import { MentionsInput, Mention } from "react-mentions";
 import context from "../context/context";
 import { Carousel } from "react-responsive-carousel";
-import { upsertLocation } from "../services/locationSocket";
+import { deleteLocation, upsertLocation } from "../services/locationSocket";
 import { useSelector } from "react-redux";
 import socket from "../services/locationSocket";
 import axios from "axios";
+import { FaEllipsisH } from "react-icons/fa";
 const connectionNodeIdSelector = (state: any) => state.connectionNodeId;
 
 type propTypes = {
@@ -70,8 +71,13 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
     };
   });
   const [mentionVal, setMentionVal] = useState("");
-  const [state, setState] = useState({ detailsOpen: true, isHoursOpen: false });
+  const [state, setState] = useState({
+    detailsOpen: true,
+    isHoursOpen: false,
+    isDropDownOpen: false,
+  });
   const [locationState, setLocationState] = useState<any>(null);
+  const [directionState, setDirectionState] = useState<any>({});
 
   const {
     response,
@@ -93,9 +99,12 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
   }, [response]);
 
   return (
-    <div className="customNode ">
+    <div
+      className="customNode overflow"
+      onClick={() => setState({ ...state, isDropDownOpen: false })}
+    >
       <div
-        className="customNodeBody bg-white border-2 w-72 relative "
+        className="customNodeBody bg-white border-2 w-72 relative pt-3"
         style={{
           borderStyle: isTarget ? "dashed" : "solid",
           borderColor: isTarget ? "rgb(34 197 94)" : "#e5e7eb",
@@ -106,6 +115,9 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
           position={Position.Bottom}
           type="source"
           isConnectable={isConnectable}
+          onConnect={(connection) =>
+            setDirectionState({ ...directionState, source: connection.source })
+          }
         />
 
         <Handle
@@ -120,7 +132,38 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
             className="flex flex-col w-full p-4  gap-2 overflow-x-hidden overflow-y-auto nowheel  h-96"
             id="style-4"
           >
-            <p className=""> Added by: {locationState?.addedBy?.username}</p>
+            <span className="flex justify-between items-center">
+              <p className="bg-green-500 text-white px-3 py-1 rounded-2xl ">
+                {locationState?.addedBy?.username}
+              </p>
+
+              {/* Dropdown */}
+              <span className="relative">
+                <button
+                  onClick={() =>
+                    setState({
+                      ...state,
+                      isDropDownOpen: !state.isDropDownOpen,
+                    })
+                  }
+                >
+                  <FaEllipsisH />
+                </button>
+                {state.isDropDownOpen ? (
+                  <div className="absolute z-[51] bg-white p-2 right-0 rounded-lg w-32 shadow-2xl">
+                    {locationState.addedBy._id === currentUser._id ? (
+                      <button
+                        onClick={() => {
+                          deleteLocation(locationState.trip, locationState._id);
+                        }}
+                      >
+                        Delete location
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </span>
+            </span>
 
             <button
               className="flex z-50 self-start w-full text-start bg-slate-100 rounded-md p-1 items-center justify-between"
@@ -231,6 +274,7 @@ export default function CustomNode({ id, isConnectable, data }: propTypes) {
                 />
               </MentionsInput>
 
+              <RiAttachmentLine />
               <button
                 className="px-3 py-2 text-white rounded-lg bg-green-500"
                 onClick={() => {

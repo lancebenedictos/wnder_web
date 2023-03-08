@@ -20,9 +20,9 @@ import socket, {
 import { useParams } from "react-router";
 import Context from "../context/context";
 import CustomNode from "./CustomNode";
-import FloatingEdge from "./FloatingEdge";
 import NewLocationPreviewModal from "./NewLocationPreviewModal";
 import uuid from "react-uuid";
+import CustomEdge from "./CustomEdge";
 
 const initialNodes = [
   { id: "1", position: { x: 0, y: 0 }, data: { label: "1" } },
@@ -35,12 +35,14 @@ const nodeTypes = {
 };
 
 const edgeTypes = {
-  floating: FloatingEdge,
+  customedge: CustomEdge,
 };
 
+function checkSocket() {
+  console.log(socket.connected);
+}
 const defaultEdgeOptions = {
   style: { strokeWidth: 3 },
-  type: "bezier",
   animated: true,
   markerEnd: MarkerType.ArrowClosed,
 };
@@ -50,12 +52,17 @@ function TripPlanner() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   // const [showNewLocationModal, setShowNewLocationModal] = useState(false);
+
   const onConnect = useCallback(
     (params: any) => {
       setEdges((eds) => {
-        if (id) addNewEdge(id, [...eds, { ...params, id: uuid() }]);
+        if (id)
+          addNewEdge(id, [
+            ...eds,
+            { ...params, id: uuid(), type: "customedge" },
+          ]);
 
-        return addEdge({ ...params, id: uuid() }, eds);
+        return addEdge({ ...params, id: uuid(), type: "customedge" }, eds);
       });
     },
     [setEdges, id]
@@ -68,8 +75,11 @@ function TripPlanner() {
   } = useFetch("GET", `http://localhost:8080/trips/${id}/users`);
 
   useEffect(() => {
+    window.addEventListener("focus", checkSocket);
     return () => {
       socket.removeAllListeners();
+      socket.emit("leave-trip", id);
+      window.removeEventListener("focus", checkSocket);
     };
   }, []);
 
@@ -110,6 +120,11 @@ function TripPlanner() {
 
     socket.on("updated-trip", (trip) => {
       setState({ ...state, ...trip });
+    });
+
+    socket.on("deleted-location", (trip, locations) => {
+      setEdges(trip.edges);
+      setState({ ...state, ...trip, locations });
     });
   }, [state, setState, setEdges]);
 
@@ -165,7 +180,7 @@ function TripPlanner() {
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           fitView
-          // edgeTypes={edgeTypes}
+          edgeTypes={edgeTypes}
           defaultEdgeOptions={defaultEdgeOptions}
         >
           <MiniMap zoomable pannable />

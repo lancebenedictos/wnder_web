@@ -88,7 +88,6 @@ function App() {
 
   useEffect(() => {
     return () => {
-      console.log("disconnect");
       socket.off("connect");
       socket.off("disconnect");
       socket.off("pong");
